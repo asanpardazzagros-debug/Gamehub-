@@ -2,7 +2,7 @@
   "name": "smart-contract-storage-and-intraction",
   "displayName": "SlotMatrix",
   "description": "Interact with Smart Contracts directly from VS Code. Load ABIs, call functions, decode data, view and explore storage layout in a clean, formatted view — all within your editor.",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "license": "MIT",
   "publisher": "sherlockvarm",
   "icon": "assets/slotmatrix-logo.png",
@@ -18,7 +18,15 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Debuggers"
+    "Debuggers",
+    "Testing"
+  ],
+  "keywords": [
+    "blockchain",
+    "solidity",
+    "smart-contracts",
+    "web3",
+    "ethereum"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
