@@ -1,0 +1,13 @@
+.heading {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.icon {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.icon:hover {
+  box-shadow: 0 0 8px rgba(0, 123, 255, 0.6); /* blue glow effect */
+}
