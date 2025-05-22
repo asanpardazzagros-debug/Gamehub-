@@ -1,15 +1,19 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
-import * as http from "http";
 import { MessageId, Terminals, VSCodeMessage } from "./MessageId";
-import { exec, spawn, ChildProcessWithoutNullStreams } from "child_process";
+import { spawn, ChildProcessWithoutNullStreams } from "child_process";
 
-let anvilTerminal: vscode.Terminal | undefined;
+type ContractInfo = {
+  contractName: string;
+  contractFilePath: string;
+  basename: string;
+};
+
 let commandTerminal: vscode.Terminal | undefined;
-let panel: vscode.WebviewPanel;
 let anvilProcess: ChildProcessWithoutNullStreams | null = null;
-const ANVIL_PORT = "9545"; // Customize this as needed
+let panel: vscode.WebviewPanel;
+const ANVIL_PORT = "9545";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -62,29 +66,11 @@ export function activate(context: vscode.ExtensionContext) {
               }
               break;
             // ---- TERMINAL ----
-            case MessageId.runCommand:
-              runCommand(message.data);
-              break;
             case MessageId.runBuildCommand:
               runBuildCommand();
-              // commandTerminal = vscode.window.createTerminal({
-              //   name: "SlotMatrix Command Terminal",
-              // });
-              // commandTerminal.sendText("forge clean");
-              // commandTerminal.sendText(
-              //   "forge build --extra-output storageLayout"
-              // );
               break;
             case MessageId.createTerminal:
-              if (
-                message.data === Terminals.anvilTerminal &&
-                anvilTerminal === undefined
-              ) {
-                console.log("running anvil");
-                // anvilTerminal = vscode.window.createTerminal({
-                //   name: "SlotMatrix Anvil Terminal",
-                // });
-                // anvilTerminal.sendText("anvil --port " + ANVIL_PORT);
+              if (message.data === Terminals.anvilTerminal) {
                 startAnvil(ANVIL_PORT);
               } else if (
                 message.data === Terminals.commandTerminal &&
@@ -98,40 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
             case MessageId.restartAnvil:
               restartAnvil();
               break;
-            case MessageId.showTerminal:
-              if (message.data === Terminals.anvilTerminal) {
-                anvilTerminal?.show();
-              } else if (message.data === Terminals.commandTerminal) {
-                commandTerminal?.show();
-              }
-              break;
-            case MessageId.hideTerminal:
-              if (message.data === Terminals.anvilTerminal) {
-                anvilTerminal?.hide();
-              } else if (message.data === Terminals.commandTerminal) {
-                commandTerminal?.hide();
-              }
-              break;
-            case MessageId.disposeTerminal:
-              if (message.data === Terminals.anvilTerminal) {
-                anvilTerminal?.dispose();
-              } else if (message.data === Terminals.commandTerminal) {
-                commandTerminal?.dispose();
-              }
-              break;
-            case MessageId.isTerminalRunning:
-              if (message.data === Terminals.anvilTerminal) {
-                panel.webview.postMessage({
-                  id: MessageId.isTerminalRunning,
-                  data: anvilTerminal?.exitStatus === undefined,
-                });
-              } else if (message.data === Terminals.commandTerminal) {
-                panel.webview.postMessage({
-                  id: MessageId.isTerminalRunning,
-                  data: commandTerminal?.exitStatus === undefined,
-                });
-              }
-              break;
+
             // ---- FILES ----
             case MessageId.getSolFiles:
               const data = getAllDeployableContracts();
@@ -188,8 +141,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("slotmatrix.customSave", () => {
       runBuildCommand();
-      // commandTerminal?.sendText("forge clean");
-      // commandTerminal?.sendText("forge build --extra-output storageLayout");
+
       const data = getAllDeployableContracts();
 
       panel.webview.postMessage({
@@ -206,7 +158,7 @@ function startAnvil(port = ANVIL_PORT) {
     return;
   }
 
-  anvilProcess = spawn("anvil", ["--port", `${port}`]);
+  anvilProcess = spawn("anvil", ["--port", `${port}`, "--steps-tracing"]);
 
   anvilProcess.stdout.on("data", (data) => {
     const output = data.toString();
@@ -232,7 +184,7 @@ function startAnvil(port = ANVIL_PORT) {
   });
 }
 
-export async function restartAnvil(port = ANVIL_PORT) {
+function restartAnvil(port = ANVIL_PORT) {
   stopAnvil();
   startAnvil(port);
 }
@@ -319,32 +271,8 @@ function runBuildCommand() {
   });
 }
 
-function runCommand(command: string) {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    vscode.window.showErrorMessage("No workspace folder open");
-    return;
-  }
-  exec(
-    command,
-    { cwd: workspaceFolders[0].uri.fsPath },
-    (error, stdout, stderr) => {
-      if (error) {
-        return;
-      }
-    }
-  );
-}
-
-type ContractInfo = {
-  contractName: string;
-  contractFilePath: string;
-  basename: string;
-};
-
 const visitedFiles = new Set<string>();
 
-// Step 1: Parse remappings.txt
 function getRemappings(projectRoot: string): Record<string, string> {
   const remappingsPath = path.join(projectRoot, "remappings.txt");
   const remappings: Record<string, string> = {};
@@ -365,7 +293,6 @@ function getRemappings(projectRoot: string): Record<string, string> {
   return remappings;
 }
 
-// Step 2: Resolve import paths using remappings
 function resolveImportPath(
   importPath: string,
   currentDir: string,
@@ -386,7 +313,6 @@ function resolveImportPath(
   return null;
 }
 
-// Step 3: Extract deployable contracts only
 function getContractsFromFile(
   filePath: string,
   projectRoot: string,
@@ -439,7 +365,6 @@ function getContractsFromFile(
   return contracts;
 }
 
-// Step 4: Gather all deployable contracts
 function getAllDeployableContracts(): ContractInfo[] {
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (!workspaceFolders?.length) {
@@ -459,7 +384,6 @@ function getAllDeployableContracts(): ContractInfo[] {
   );
 }
 
-// Helper: Recursively gather Solidity files from a directory
 function getSolidityFiles(dir: string): string[] {
   let files: string[] = [];
 

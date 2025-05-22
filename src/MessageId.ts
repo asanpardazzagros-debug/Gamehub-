@@ -6,10 +6,7 @@ export const MessageId = {
   // terminal messages
   runCommand: "command",
   createTerminal: "createTerminal",
-  showTerminal: "showTerminal",
-  hideTerminal: "hideTerminal",
-  disposeTerminal: "disposeTerminal",
-  isTerminalRunning: "isTerminalRunning",
+
   terminalOutput: "terminalOutput",
   runBuildCommand: "runBuildCommand",
   buildCommandRunSuccess: "buildCommandRunSuccess",
@@ -20,10 +17,6 @@ export const MessageId = {
   getSolFiles: "getSolFiles",
   getAbi: "getAbi",
   getCurrentWorkingDirectory: "getCurrentWorkingDirectory",
-
-  //interaction check
-  deployFlag: "canDeployFlag",
-  deployFlagSuccess: "deployFlagSuccess",
 };
 
 export const Terminals = {

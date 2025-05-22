@@ -152,7 +152,9 @@ function App() {
         })
       );
 
-    const priority: { [key in 'nonpayable' | 'payable' | 'view' | 'pure']: number } = {
+    const priority: {
+      [key in "nonpayable" | "payable" | "view" | "pure"]: number;
+    } = {
       nonpayable: 0,
       payable: 1,
       view: 2,
@@ -523,6 +525,10 @@ function App() {
           value
         );
         const receipt = await response.wait(0);
+        consoleLog(`response hash: ${response.hash}`);
+        const params = [response.hash];
+        const trace = await provider.send("debug_traceTransaction", params); // step tracing can be used to show the in ui for debugging
+        consoleLog(`trace: ${JSON.stringify(trace, null, 2)}`);
 
         updateWalletBalance();
 
