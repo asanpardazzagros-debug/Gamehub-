@@ -674,6 +674,17 @@ function App() {
     };
 
     setDeployedContract((prev) => [...prev, newContract]);
+
+    setDeployedContract((prevContracts) =>
+      prevContracts.map((contract) =>
+        contract.address === atAddress
+          ? {
+              ...contract,
+              refreshTick: contract.refreshTick + 1,
+            }
+          : contract
+      )
+    );
   };
 
   return (
