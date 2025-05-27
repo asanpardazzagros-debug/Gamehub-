@@ -1,7 +1,8 @@
 import { MessageId, VSCodeMessage } from "../../src/MessageId";
 import { ethers } from "ethers";
+import { isAddress, formatEther, parseUnits } from "viem";
 import { Input, LogData } from "./Types";
-import { vscode, provider } from "../src/App";
+import { vscode } from "../src/App";
 
 export function consoleLog(message: string) {
   vscode.postMessage({
@@ -50,7 +51,7 @@ export function parseArgs(inputs: Input[]): any[] {
         }
         result.push(inputValue.toString());
       } else if (type === "address") {
-        if (ethers.isAddress(value)) {
+        if (isAddress(value)) {
           result.push(value);
         } else {
           showError(`${name} is not a valid address`);
@@ -160,27 +161,28 @@ export function parseArgs(inputs: Input[]): any[] {
   return result;
 }
 
-export function parseEthValue(
-  inputValue: string,
-  unit: string
-): ethers.BigNumberish {
+export function parseEthValue(inputValue: string, unit: string): bigint {
+  const exponents: Record<string, number> = {
+    wei: 0,
+    gwei: 9,
+    finney: 15,
+    ether: 18,
+  };
+
+  const decimals = exponents[unit.toLowerCase()] ?? 18;
+
   try {
-    return ethers.parseUnits(inputValue, unit.toLowerCase());
+    const value = parseUnits(inputValue, decimals);
+    consoleLog(`eth parsed value is ${value}`);
+    return value;
   } catch (err) {
-    consoleLog("Invalid ETH value or unit:" + JSON.stringify(err, null, 2));
-    return ethers.toBigInt(0);
+    console.error("Invalid ETH value or unit:", err);
+    return 0n;
   }
 }
 
 export function short(val: string): string {
   return val.length > 10 ? `${val.slice(0, 5)}...${val.slice(-5)}` : val;
-}
-
-export async function getFutureContractAddress(
-  deployerAddress: string
-): Promise<string> {
-  const nonce = await provider.getTransactionCount(deployerAddress);
-  return ethers.getCreateAddress({ from: deployerAddress, nonce });
 }
 
 export function decodeEventLogs(
@@ -201,9 +203,7 @@ export function decodeEventLogs(
       });
 
       decodedLogs[parsed.name] = logData;
-    } catch {
-      // Ignore unrecognized logs
-    }
+    } catch {}
   }
 
   return decodedLogs;
@@ -262,7 +262,7 @@ export function buildDeploymentLog(
       status: "0x1 Transaction mined and execution succeed",
       from,
       to,
-      value: `${ethers.formatEther(value)} ETH`,
+      value: `${formatEther(BigInt(value))} ETH`,
       input,
       decodedInput: decodedInputFormatted,
       blockHash: receipt.blockHash,
@@ -282,7 +282,7 @@ export function buildDeploymentLog(
       status: "0x0 Transaction failed",
       from,
       to,
-      value: `${ethers.formatEther(value)} ETH`,
+      value: `${formatEther(BigInt(value))} ETH`,
       input,
       decodedInput: decodedInputFormatted,
     };
@@ -377,7 +377,7 @@ export function buildFunctionCallLogs(
         status: "0x1 Transaction mined and execution succeed",
         from: receipt.from,
         to,
-        value: `${ethers.formatEther(value)} ETH`,
+        value: `${formatEther(BigInt(value))} ETH`,
         blockHash: receipt.blockHash,
         blockNumber: receipt.blockNumber,
         transactionHash: receipt.hash,
@@ -401,7 +401,7 @@ export function buildFunctionCallLogs(
         contractAddress,
         from,
         to,
-        value: `${ethers.formatEther(value)} ETH`,
+        value: `${formatEther(BigInt(value))} ETH`,
         input: inputBytes,
         decodedInput: decodedInputFormatted,
         output: outputBytes,

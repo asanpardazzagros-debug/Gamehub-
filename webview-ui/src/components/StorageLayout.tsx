@@ -1,4 +1,6 @@
 import { ethers } from "ethers";
+import { pad, toHex } from "viem";
+
 import { useEffect, useState } from "react";
 import JsonView from "@uiw/react-json-view";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
@@ -73,8 +75,8 @@ function StorageLayout({
     return result;
   }
 
-  function toSlotHex(slot: any) {
-    return ethers.zeroPadValue(ethers.toBeHex(BigInt(slot)), 32);
+  function toSlotHex(slot: bigint | number | string) {
+    return pad(toHex(BigInt(slot)));
   }
 
   async function getStringOrBytesStorage(
