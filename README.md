@@ -14,29 +14,54 @@
 
 To use this extension, please ensure the following:
 
-1. **Project Setup:**
-   - Your project must be a **Foundry-based** project.
-   - Your Solidity contracts (`.sol` files) should be located inside the `src` folder of your project.
+### 1. **Project Setup:**
 
-2. **Check if Anvil is Running:**
-   - Open your terminal and run the following command to check if Anvil is running on port `9545`:
-     ```bash
-     lsof -i :9545
-     ```
-   - If you see a process listening on that port (likely named `anvil`), it means Anvil is running.
+- Your project must be a **Foundry-based** project.
+- Solidity contract files (`.sol`) should be located inside the `src` folder of your project.
 
-3. **To Kill the Anvil Process:**
-   - Find the process ID (PID) from the output of the previous command.
-   - Kill the process by running:
-     ```bash
-     kill <processid>
-     ```
-   - If the process does not terminate, force kill it with:
-     ```bash
-     kill -9 <processid>
-     ```
+### 2. **Check if Anvil is Running on Port `9545`:**
 
+#### **Linux/macOS:**
 
+```bash
+lsof -i :9545
+```
+
+#### **Windows (PowerShell):**
+
+```powershell
+Get-Process -Id (Get-NetTCPConnection -LocalPort 9545).OwningProcess
+```
+
+### 3. **To Kill the Anvil Process:**
+
+#### **Linux/macOS:**
+
+- Kill using PID:
+
+  ```bash
+  kill <processid>
+  ```
+
+- If the process doesn’t terminate, force kill:
+
+  ```bash
+  kill -9 <processid>
+  ```
+
+#### **Windows (PowerShell):**
+
+- Kill using PID:
+
+  ```powershell
+  Stop-Process -Id <processid>
+  ```
+
+- Force kill (if needed):
+
+  ```powershell
+  Stop-Process -Id <processid> -Force
+  ```
 
 ## 🎥 Demo
 
