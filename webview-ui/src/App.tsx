@@ -35,6 +35,8 @@ import {
 import "@vscode/codicons/dist/codicon.css";
 import StorageLayout from "./components/StorageLayout";
 import Log from "./components/Log";
+import { createPublicClient, http } from "viem";
+import { anvil } from "viem/chains";
 
 declare function acquireVsCodeApi(): {
   postMessage: (message: any) => void;
@@ -55,6 +57,10 @@ export const vscode = isVSCode
 
 const ETHFormat = ["wei", "gwei", "finney", "ether"];
 export const provider = new ethers.JsonRpcProvider("http://localhost:9545");
+export const client = createPublicClient({
+  chain: anvil,
+  transport: http("http://localhost:9545"),
+});
 
 function App() {
   /*//////////////////////////////////////////////////////////////
