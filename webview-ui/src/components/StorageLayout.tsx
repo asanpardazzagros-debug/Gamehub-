@@ -1,4 +1,5 @@
-import { ethers } from "ethers";
+import { hexToBytes, pad, toHex, keccak256 } from "viem";
+
 import { useEffect, useState } from "react";
 import JsonView from "@uiw/react-json-view";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
@@ -73,8 +74,8 @@ function StorageLayout({
     return result;
   }
 
-  function toSlotHex(slot: any) {
-    return ethers.zeroPadValue(ethers.toBeHex(BigInt(slot)), 32);
+  function toSlotHex(slot: bigint | number | string) {
+    return pad(toHex(BigInt(slot)));
   }
 
   async function getStringOrBytesStorage(
@@ -83,7 +84,7 @@ function StorageLayout({
     depth = 0
   ): Promise<StorageDataType[]> {
     const slotStorageValue = await getStorageValue(slot.toString());
-    const rawBytes = ethers.getBytes(slotStorageValue);
+    const rawBytes = hexToBytes(slotStorageValue as `0x${string}`);
     const isShortString = rawBytes[0] !== 0;
     let result: StorageDataType[] = [];
     result.push({
@@ -95,16 +96,15 @@ function StorageLayout({
     if (isShortString) {
       return result;
     } else {
-      const length = (ethers.toBigInt(slotStorageValue) - 1n) / 2n;
+      const length = (BigInt(slotStorageValue) - 1n) / 2n;
 
       const noOfSlotsRequired = Math.ceil(Number(length) / 32);
 
-      const baseSlot = ethers.keccak256(
-        ethers.zeroPadValue(ethers.toBeHex(slot), 32)
-      );
+      const baseSlot = keccak256(pad(toHex(slot), { size: 32 }));
+
       for (let i = 0n; i < noOfSlotsRequired; i++) {
-        const slotValueTo = ethers.toBigInt(baseSlot) + i;
-        const data = await getStorageValue(ethers.toBeHex(slotValueTo));
+        const slotValueTo = BigInt(baseSlot) + i;
+        const data = await getStorageValue(toHex(slotValueTo));
         result.push({
           slot: slotValueTo.toString(),
           label: `${label}[${i}]`,
@@ -244,11 +244,11 @@ function StorageLayout({
       value: rawLength,
       noOfParents: depth,
     });
-    const length = parseInt(ethers.toBigInt(rawLength).toString());
-    const baseDataSlot = ethers.keccak256(toSlotHex(baseSlot));
+    const length = parseInt(BigInt(rawLength).toString());
+    const baseDataSlot = keccak256(toSlotHex(baseSlot));
 
     for (let i = 0; i < length; i++) {
-      const elementSlot = ethers.toBigInt(baseDataSlot) + BigInt(i);
+      const elementSlot = BigInt(baseDataSlot) + BigInt(i);
       const elementSlotStr = elementSlot.toString();
 
       if (base.startsWith("t_array") && base.endsWith("dyn_storage")) {
@@ -263,7 +263,7 @@ function StorageLayout({
         if (storageLayout.types[base].encoding === "bytes") {
           // this is for dynamic values i.e. string or bytes whose encoding is not inplace
           const data = await getStringOrBytesStorage(
-            ethers.toBigInt(elementSlotStr),
+            BigInt(elementSlotStr),
             `${labelPrefix}[${i}]`,
             depth + 1
           );
@@ -271,7 +271,7 @@ function StorageLayout({
         } else if (base.startsWith("t_struct")) {
           const data = await getStructStorage(
             storageLayout.types[type.base],
-            ethers.toBigInt(baseDataSlot) +
+            BigInt(baseDataSlot) +
               BigInt(i * (storageLayout.types[type.base].numberOfBytes / 32)),
             `${labelPrefix}[${i}]`,
             depth + 1
@@ -380,7 +380,11 @@ function StorageLayout({
 
   async function getStorageValue(slot: number | string): Promise<string> {
     const slotHex = toSlotHex(slot);
-    return provider.getStorage(contractAddress, slotHex);
+    const slotValue = await provider.getStorageAt({
+      address: contractAddress as `0x${string}`,
+      slot: slotHex,
+    });
+    return slotValue?.toString() || "";
   }
 
   return (

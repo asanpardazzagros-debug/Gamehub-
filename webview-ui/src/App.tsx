@@ -22,7 +22,6 @@ import {
   WalletData,
   Output,
 } from "../utils/Types";
-import { ethers } from "ethers";
 
 import {
   parseArgs,
@@ -35,6 +34,18 @@ import {
 import "@vscode/codicons/dist/codicon.css";
 import StorageLayout from "./components/StorageLayout";
 import Log from "./components/Log";
+import {
+  createPublicClient,
+  createWalletClient,
+  encodeDeployData,
+  formatEther,
+  http,
+  isAddress,
+  encodeFunctionData,
+  decodeFunctionResult,
+} from "viem";
+import { anvil } from "viem/chains";
+import { privateKeyToAccount } from "viem/accounts";
 
 declare function acquireVsCodeApi(): {
   postMessage: (message: any) => void;
@@ -54,7 +65,10 @@ export const vscode = isVSCode
     };
 
 const ETHFormat = ["wei", "gwei", "finney", "ether"];
-export const provider = new ethers.JsonRpcProvider("http://localhost:9545");
+export const provider = createPublicClient({
+  chain: anvil,
+  transport: http("http://localhost:9545"),
+});
 
 function App() {
   /*//////////////////////////////////////////////////////////////
@@ -239,7 +253,10 @@ function App() {
   }
 
   async function getBalances(address: string): Promise<string> {
-    return ethers.formatEther(await provider.getBalance(address));
+    const balance = await provider.getBalance({
+      address: address as `0x${string}`,
+    });
+    return formatEther(balance);
   }
 
   async function handleDeploy() {
@@ -264,15 +281,15 @@ function App() {
           return;
         }
       }
-      const wallet = new ethers.Wallet(
-        wallets[currentWallet].privateKey,
-        provider
+
+      const walletAccount = privateKeyToAccount(
+        wallets[currentWallet].privateKey as `0x${string}`
       );
-      const factory = new ethers.ContractFactory(
-        currentContractJsonData.abi,
-        currentContractJsonData.bytecode.object,
-        wallet
-      );
+      const walletClient = createWalletClient({
+        account: walletAccount,
+        chain: anvil,
+        transport: http("http://localhost:9545"),
+      });
 
       const value =
         constructorInputs?.stateMutability === "payable"
@@ -280,7 +297,7 @@ function App() {
               value: parseEthValue(ethValue, ethFormat),
             }
           : {
-              value: 0,
+              value: 0n,
             };
 
       const args = parseArgs(constructorInputs?.inputs || []);
@@ -291,24 +308,32 @@ function App() {
         return;
       }
 
-      let contract;
-      let response;
       const currentContractData = contractFiles[currentContractFileIndex];
+      const deployData = encodeDeployData({
+        abi: currentContractJsonData.abi,
+        bytecode: currentContractJsonData.bytecode.object,
+        args: args,
+      });
 
       try {
-        contract = await factory.deploy(...args, value);
-        response = contract.deploymentTransaction();
-        const receipt = await response?.wait(0);
+        const hash = await walletClient.sendTransaction({
+          value: value.value,
+          data: deployData,
+        });
+        const receipt = await provider.waitForTransactionReceipt({
+          hash: hash,
+          confirmations: 0,
+        });
 
         let _balance = "0.0";
         if (constructorInputs?.stateMutability === "payable") {
           updateWalletBalance();
-          _balance = ethers.formatEther(value.value);
+          _balance = formatEther(BigInt(value.value));
         }
 
         const newContract: DeployedContract = {
           name: contractFiles[currentContractFileIndex].contractName,
-          address: (await contract?.getAddress()) || "",
+          address: receipt.contractAddress || "",
           functions: buildFunctionStatesFromABI(currentContractJsonData.abi),
           abi: currentContractJsonData.abi,
           storageLayout: currentContractJsonData.storageLayout,
@@ -316,18 +341,18 @@ function App() {
           balance: _balance,
         };
         setDeployedContract((prev) => [...prev, newContract]);
-
+        consoleLog("log building started");
         const log = buildDeploymentLog(
           true,
           wallets[currentWallet].publicKey,
           `${currentContractData.basename}:${currentContractData.contractName}.(constructor)`,
           value.value.toString(),
-          response?.data || "",
+          deployData,
           args,
           currentContractJsonData.abi,
           receipt
         );
-        setLogData((prev) => [...prev, log]);
+        if (log !== undefined) setLogData((prev) => [...prev, log]);
       } catch (err: any) {
         consoleLog(`deployment error : ${JSON.stringify(err, null, 2)}`);
         const log = buildDeploymentLog(
@@ -335,14 +360,22 @@ function App() {
           wallets[currentWallet].publicKey,
           `${currentContractData.basename}:${currentContractData.contractName}.(constructor)`,
           value.value.toString(),
-          err.transaction.data,
+          deployData,
           args,
           currentContractJsonData.abi
         );
-        setLogData((prev) => [...prev, log]);
+        if (log !== undefined) setLogData((prev) => [...prev, log]);
         return;
       }
     }
+  }
+
+  function stringifyWithBigInt(obj: any) {
+    return JSON.stringify(
+      obj,
+      (_, value) => (typeof value === "bigint" ? value.toString() : value),
+      2 // pretty-print with 2-space indent
+    );
   }
 
   async function handleFunctionCall(
@@ -364,13 +397,15 @@ function App() {
       }
     }
 
-    const signer = new ethers.Wallet(
-      wallets[currentWallet].privateKey,
-      provider
+    const walletAccount = privateKeyToAccount(
+      wallets[currentWallet].privateKey as `0x${string}`
     );
-    const contract = new ethers.Contract(contractAddress, abi, provider);
-    const contractWithSigner = contract.connect(signer);
-    const iff = new ethers.Interface(abi);
+    const walletClient = createWalletClient({
+      account: walletAccount,
+      chain: anvil,
+      transport: http("http://localhost:9545"),
+    });
+
     const currentContractData = contractFiles[currentContractFileIndex];
 
     // === Fallback Handling ===
@@ -380,7 +415,7 @@ function App() {
     const value =
       functionData.stateMutability === "payable"
         ? { value: parseEthValue(ethValue, ethFormat) }
-        : { value: 0 };
+        : { value: 0n };
 
     if (isLowLevel) {
       const isValidBytes = /^0x([0-9a-fA-F]{2})*$/.test(calldataHex);
@@ -390,15 +425,16 @@ function App() {
       }
 
       try {
-        const tx = {
-          to: contractAddress,
-          data: calldataHex,
+        const hash = await walletClient.sendTransaction({
+          to: contractAddress as `0x${string}`,
+          data: calldataHex as `0x${string}`,
           value: value.value,
-          from: wallets[currentWallet].publicKey,
-        };
+        });
 
-        const response = await signer.sendTransaction(tx);
-        const receipt = await response.wait(0);
+        const receipt = await provider.waitForTransactionReceipt({
+          hash: hash,
+          confirmations: 0,
+        });
 
         updateWalletBalance();
 
@@ -426,7 +462,7 @@ function App() {
               ? {
                   ...contract,
                   refreshTick: contract.refreshTick + 1,
-                  balance: ethers.formatEther(value.value),
+                  balance: formatEther(BigInt(value.value)),
                 }
               : contract
           )
@@ -462,7 +498,14 @@ function App() {
       functionData.stateMutability === "pure"
     ) {
       try {
-        const result = await contract[functionData.name](...args);
+        const result = await provider.readContract({
+          address: contractAddress as `0x${string}`,
+          abi: abi,
+          functionName: functionData.name,
+          args: args,
+          account: walletAccount,
+        });
+
         if (!functionData.outputs) return;
 
         const resultArray = Array.isArray(result) ? result : [result];
@@ -489,46 +532,68 @@ function App() {
         return;
       }
 
+      const rawCallData = encodeFunctionData({
+        abi,
+        functionName: functionData.name,
+        args: args,
+      });
       try {
         let rawOutput: any = undefined;
         let decodedOutput: any = undefined;
-
-        if (functionData.outputs !== undefined) {
+        consoleLog("here");
+        consoleLog(`function data: ${JSON.stringify(functionData)}`);
+        if (functionData.outputs && functionData.outputs.length > 0) {
+          consoleLog(`rawCallData: ${rawCallData}`);
           rawOutput = await provider.call({
-            to: contractAddress,
-            data: iff.encodeFunctionData(functionData.name, [...args]),
+            to: contractAddress as `0x${string}`,
+            data: rawCallData,
             value: value.value,
-            from: wallets[currentWallet].publicKey,
+            account: walletAccount,
           });
 
-          decodedOutput = iff.decodeFunctionResult(
-            functionData.name,
-            rawOutput
-          );
+          decodedOutput = decodeFunctionResult({
+            abi: abi,
+            functionName: functionData.name,
+            data: `${rawOutput.data}` as `0x${string}`,
+          });
+          consoleLog(`decodedOutput: ${stringifyWithBigInt(decodedOutput)}`);
         }
 
-        if (decodedOutput?.length > 0 && functionData.outputs !== undefined) {
-          const newOutput: Output[] = functionData.outputs.map(
-            (v: Output, i) => ({
+        if (
+          decodedOutput?.length > 0 &&
+          functionData.outputs &&
+          functionData.outputs.length > 0
+        ) {
+          let newOutput: Output[] = [];
+          if (functionData.outputs.length === 1) {
+            newOutput.push({
+              ...functionData.outputs[0],
+              value: `${decodedOutput}`,
+            });
+          } else {
+            newOutput = functionData.outputs.map((v: Output, i) => ({
               ...v,
               value: `${decodedOutput[i]}`,
-            })
-          );
-
+            }));
+          }
           setDeployedContract((prev) =>
             updateOutputValue(prev, contractIndex, functionIndex, newOutput)
           );
         }
 
-        const response = await (contractWithSigner as any)[functionData.name](
-          ...args,
-          value
-        );
-        const receipt = await response.wait(0);
-        consoleLog(`response hash: ${response.hash}`);
-        const params = [response.hash];
-        const trace = await provider.send("debug_traceTransaction", params); // step tracing can be used to show the in ui for debugging
-        consoleLog(`trace: ${JSON.stringify(trace, null, 2)}`);
+        const hash = await walletClient.writeContract({
+          address: contractAddress as `0x${string}`,
+          abi: abi,
+          functionName: functionData.name,
+          args: args,
+          value: value.value,
+        });
+        consoleLog(`hash: ${hash}`);
+        const receipt = await provider.waitForTransactionReceipt({
+          hash: hash,
+          confirmations: 0,
+        });
+        consoleLog(`receipt: ${stringifyWithBigInt(receipt)}`);
 
         updateWalletBalance();
 
@@ -537,12 +602,12 @@ function App() {
           wallets[currentWallet].publicKey,
           `${currentContractData.basename}:${currentContractData.contractName}.${functionData.name}()`,
           functionData.name,
-          response.data,
+          rawCallData,
           args,
           abi,
           value.value.toString(),
           contractAddress,
-          rawOutput,
+          rawOutput !== undefined ? `${rawOutput?.data}` : undefined,
           receipt
         );
 
@@ -556,24 +621,24 @@ function App() {
               ? {
                   ...contract,
                   refreshTick: contract.refreshTick + 1,
-                  balance: ethers.formatEther(value.value),
+                  balance: formatEther(BigInt(value.value)),
                 }
               : contract
           )
         );
       } catch (err: any) {
-        consoleLog(`error: ${JSON.stringify(err, null, 2)}`);
+        consoleLog(`error: ${stringifyWithBigInt(err)}`);
         const log = buildFunctionCallLogs(
           false,
           wallets[currentWallet].publicKey,
           `${currentContractData.basename}:${currentContractData.contractName}.${functionData.name}()`,
           functionData.name,
-          err.transaction?.data,
+          rawCallData,
           args,
           abi,
           value.value.toString(),
           contractAddress,
-          err.data,
+          undefined,
           undefined,
           err
         );
@@ -640,7 +705,7 @@ function App() {
         ...current,
         balance:
           current.balance -
-          Number(ethers.formatEther(parseEthValue(ethValue, ethFormat))), // subtract the sent amount
+          Number(formatEther(parseEthValue(ethValue, ethFormat))), // subtract the sent amount
       };
 
       return updatedWallets;
@@ -657,7 +722,7 @@ function App() {
     if (atAddress === "") {
       showError("Enter the contract address");
       return;
-    } else if (!ethers.isAddress(atAddress)) {
+    } else if (!isAddress(atAddress)) {
       showError(`${atAddress} is not a valid contract address.`);
       return;
     }
