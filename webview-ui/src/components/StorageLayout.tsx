@@ -3,7 +3,7 @@ import { hexToBytes, pad, toHex, keccak256 } from "viem";
 import { useEffect, useState } from "react";
 import JsonView from "@uiw/react-json-view";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
-import { client } from "../App";
+import { provider } from "../App";
 
 interface StorageLayoutInterface {
   storageLayout: {
@@ -380,7 +380,7 @@ function StorageLayout({
 
   async function getStorageValue(slot: number | string): Promise<string> {
     const slotHex = toSlotHex(slot);
-    const slotValue = await client.getStorageAt({
+    const slotValue = await provider.getStorageAt({
       address: contractAddress as `0x${string}`,
       slot: slotHex,
     });

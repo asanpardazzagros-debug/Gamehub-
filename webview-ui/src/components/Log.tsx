@@ -137,7 +137,13 @@ function Log({ logData }: LogProps) {
                 log.input.length > 15 ? short(log.input) : log.input,
                 log.input
               )}
-              {renderLogField("output", log.output)}
+              {renderLogField(
+                "output",
+                log.output && log.output.length > 15
+                  ? short(log.output)
+                  : log.output,
+                log.output
+              )}
               {renderLogField("decodedInput", log.decodedInput)}
               {renderLogField("decodedOutput", log.decodedOutput)}
               {renderLogField("eventLogs", log.eventLogs)}
