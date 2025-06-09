@@ -34,27 +34,27 @@
     "commands": [
       {
         "command": "slotmatrix.panelView",
-        "title": "SlotMatrix"
+        "title": "SlotMatrix : Start"
       },
       {
         "command": "slotmatrix.customSave",
-        "title": "SlotMatrix Custom Save"
+        "title": "SlotMatrix : Save Contracts"
       },
       {
         "command": "slotmatrix.welcome",
-        "title": "SlotMatrix Welcome"
+        "title": "SlotMatrix : Welcome"
       }
     ],
     "keybindings": [
       {
         "command": "slotmatrix.customSave",
-        "key": "ctrl+s",
+        "key": "ctrl+shift+s",
         "when": "slotmatrixPanelOpen"
       },
       {
         "command": "slotmatrix.customSave",
-        "key": "cmd+s",
-        "mac": "cmd+s",
+        "key": "cmd+shift+s",
+        "mac": "cmd+shift+s",
         "when": "slotmatrixPanelOpen"
       }
     ]
