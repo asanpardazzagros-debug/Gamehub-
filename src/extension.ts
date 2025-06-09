@@ -150,6 +150,41 @@ export function activate(context: vscode.ExtensionContext) {
       });
     })
   );
+  //welcome command
+  context.subscriptions.push(
+    vscode.commands.registerCommand("slotmatrix.welcome", () => {
+      const hasCreated = context.globalState.get("slotmatrix.welcome.create");
+
+      if (!hasCreated) {
+        context.globalState.update("slotmatrix.welcome.create", true);
+        const welcomePanel = vscode.window.createWebviewPanel(
+          "welcomePage",
+          "Welcome",
+          vscode.ViewColumn.One,
+          {
+            enableScripts: true,
+          }
+        );
+        const htmlPath = path.join(
+          context.extensionPath,
+          "out",
+          "welcome.html"
+        );
+        let html = fs.readFileSync(htmlPath, "utf8");
+        welcomePanel.webview.html = html;
+        welcomePanel.onDidDispose(() => {
+          context.globalState.update("slotmatrix.welcome.create", false);
+        });
+      }
+    })
+  );
+
+  const hasShownWelcome = context.globalState.get("slotmatrix.hasShownWelcome");
+  console.log("hasShownWelcome : ", hasShownWelcome);
+  if (!hasShownWelcome) {
+    context.globalState.update("slotmatrix.hasShownWelcome", true);
+    vscode.commands.executeCommand("slotmatrix.welcome");
+  }
 }
 
 function startAnvil(port = ANVIL_PORT) {
