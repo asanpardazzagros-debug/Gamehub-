@@ -3,3 +3,4 @@ export type ContractInfo = {
   contractFilePath: string;
   basename: string;
 };
+

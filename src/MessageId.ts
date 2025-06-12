@@ -17,6 +17,8 @@ export const MessageId = {
   getSolFiles: "getSolFiles",
   getAbi: "getAbi",
   getCurrentWorkingDirectory: "getCurrentWorkingDirectory",
+  getProjectType: "getProjectType",
+  createFoundryTomlFile: "createFoundryTomlFile",
 };
 
 export const Terminals = {
@@ -28,4 +30,10 @@ export const VSCodeMessage = {
   error: "error",
   info: "info",
   warning: "warning",
+};
+
+export const ProjectType = {
+  foundry: "foundry",
+  hardhat: "hardhat",
+  none: "none",
 };

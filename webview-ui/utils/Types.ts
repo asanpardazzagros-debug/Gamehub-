@@ -58,3 +58,29 @@ export type WalletData = {
   publicKey: string;
   balance: number;
 };
+
+export type ContractFileData = {
+  contractName: string;
+  contractFilePath: string;
+  basename: string;
+};
+
+export type StorageLayout = {
+  storage: {
+    astId: number;
+    contract: string;
+    label: string;
+    offset: number;
+    slot: string;
+    type: string;
+  }[];
+  types: {
+    [typeId: string]: {
+      encoding: string;
+      label: string;
+      numberOfBytes: string;
+      key?: string; // optional, e.g. for mappings
+      value?: string; // optional, e.g. for mappings
+    };
+  };
+};

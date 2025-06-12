@@ -11,3 +11,15 @@
 .icon:hover {
   box-shadow: 0 0 8px rgba(0, 123, 255, 0.6); /* blue glow effect */
 }
+
+.green-check {
+  margin-left: 12px;
+  background-color: #5ece00;
+  border-radius: 50%;
+  display: flex;
+  padding: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}

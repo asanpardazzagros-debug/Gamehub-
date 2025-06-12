@@ -1,10 +1,19 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs";
-import { MessageId, Terminals, VSCodeMessage } from "../../MessageId";
+import {
+  MessageId,
+  Terminals,
+  VSCodeMessage,
+  ProjectType,
+} from "../../MessageId";
 import { restartAnvil, startAnvil, stopAnvil } from "../AnvilHelperFunc";
 import { disposeCommandTerminal, runBuildCommand } from "../CommandHelperFunc";
-import { getAllDeployableContracts } from "../FileHelperFunc";
+import {
+  getAllDeployableContracts,
+  isFoundryOrHardhatProject,
+  createFoundryConfig,
+} from "../FileHelperFunc";
 
 export const slotMatrixMainPanel = (
   context: vscode.ExtensionContext
@@ -58,6 +67,30 @@ export const slotMatrixMainPanel = (
           break;
         // ---- TERMINAL ----
         case MessageId.runBuildCommand:
+          // Check if this is a Hardhat project without foundry.toml
+          const currentProjectType = isFoundryOrHardhatProject();
+          const pwd = vscode.workspace.workspaceFolders;
+
+          if (currentProjectType === ProjectType.hardhat && pwd?.length) {
+            const projectRoot = pwd[0].uri.fsPath;
+            const foundryConfigPath = path.join(projectRoot, "foundry.toml");
+
+            // If foundry.toml doesn't exist, create it for Hardhat projects
+            if (!fs.existsSync(foundryConfigPath)) {
+              try {
+                createFoundryConfig();
+                vscode.window.showInformationMessage(
+                  "Created foundry.toml for Hardhat project"
+                );
+              } catch (error) {
+                vscode.window.showErrorMessage(
+                  `Failed to create foundry.toml: ${error}`
+                );
+                break;
+              }
+            }
+          }
+
           runBuildCommand(panel);
           break;
         case MessageId.createTerminal:
@@ -99,9 +132,18 @@ export const slotMatrixMainPanel = (
             return;
           }
           const currentWorkingDirectory = workspaceFolders[0].uri.fsPath;
+
           panel.webview.postMessage({
             id: MessageId.getCurrentWorkingDirectory,
             data: currentWorkingDirectory,
+          });
+          break;
+
+        case MessageId.getProjectType:
+          const projectType = isFoundryOrHardhatProject();
+          panel.webview.postMessage({
+            id: MessageId.getProjectType,
+            data: projectType,
           });
           break;
       }
