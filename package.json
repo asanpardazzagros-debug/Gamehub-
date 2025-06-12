@@ -2,7 +2,7 @@
   "name": "smart-contract-storage-and-intraction",
   "displayName": "SlotMatrix",
   "description": "Interact with Smart Contracts directly from VS Code. Load ABIs, call functions, decode data, view and explore storage layout in a clean, formatted view — all within your editor.",
-  "version": "0.1.1",
+  "version": "0.1.4",
   "license": "MIT",
   "publisher": "sherlockvarm",
   "icon": "assets/slotmatrix-logo.png",
@@ -34,27 +34,35 @@
     "commands": [
       {
         "command": "slotmatrix.panelView",
-        "title": "SlotMatrix"
+        "title": "SlotMatrix : Start"
       },
       {
         "command": "slotmatrix.customSave",
-        "title": "SlotMatrix Custom Save"
+        "title": "SlotMatrix : Save Contracts"
+      },
+      {
+        "command": "slotmatrix.welcome",
+        "title": "SlotMatrix : Welcome"
       }
     ],
     "keybindings": [
       {
         "command": "slotmatrix.customSave",
-        "key": "ctrl+s",
+        "key": "ctrl+shift+s",
         "when": "slotmatrixPanelOpen"
       },
       {
         "command": "slotmatrix.customSave",
-        "key": "cmd+s",
-        "mac": "cmd+s",
+        "key": "cmd+shift+s",
+        "mac": "cmd+shift+s",
         "when": "slotmatrixPanelOpen"
       }
     ]
   },
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:slotmatrix.welcome"
+  ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",

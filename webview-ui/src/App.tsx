@@ -1,9 +1,6 @@
 import {
   VscodeButton,
-  VscodeDivider,
-  VscodeOption,
   VscodeScrollable,
-  VscodeSingleSelect,
   VscodeTabHeader,
   VscodeTabPanel,
   VscodeTabs,
@@ -13,14 +10,14 @@ import {
 import "./App.css";
 import { AnvilKeys } from "../utils/AnvilKeys";
 import { useEffect, useState } from "react";
-import { MessageId, Terminals } from "../../src/MessageId";
+import { MessageId, ProjectType, Terminals } from "../../src/MessageId";
 import {
-  ABIEntry,
   FuncState,
   DeployedContract,
   LogData,
   WalletData,
   Output,
+  ContractFileData,
 } from "../utils/Types";
 
 import {
@@ -33,7 +30,7 @@ import {
 } from "../utils/HelperFunc";
 import "@vscode/codicons/dist/codicon.css";
 import StorageLayout from "./components/StorageLayout";
-import Log from "./components/Log";
+
 import {
   createPublicClient,
   createWalletClient,
@@ -46,6 +43,20 @@ import {
 } from "viem";
 import { anvil } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import {
+  buildInitialConstructorState,
+  buildFunctionStatesFromABI,
+  updateInputValue,
+  stringifyWithBigInt,
+  updateOutputValue,
+  handleCopy,
+} from "../utils/stateHelper/HelperFunc.ts";
+import Network from "./components/Network.tsx";
+import Wallets from "./components/Wallets.tsx";
+import DeployableContracts from "./components/DeployableContracts.tsx";
+import ETHInput, { ETHFormat } from "./components/EthInput.tsx";
+import ConstructorInput from "./components/ConstructorInput.tsx";
+import LogSection from "./components/LogSection.tsx";
 
 declare function acquireVsCodeApi(): {
   postMessage: (message: any) => void;
@@ -64,46 +75,41 @@ export const vscode = isVSCode
       },
     };
 
-const ETHFormat = ["wei", "gwei", "finney", "ether"];
-export const provider = createPublicClient({
+export let provider = createPublicClient({
   chain: anvil,
   transport: http("http://localhost:9545"),
 });
 
 function App() {
-  /*//////////////////////////////////////////////////////////////
-                              WALLET DATA
-    //////////////////////////////////////////////////////////////*/
-
   const [currentWallet, setCurrentWallet] = useState(0);
   const [wallets, setWalletData] = useState<WalletData[]>(AnvilKeys);
+  const [networkUrl, setNetworkUrl] = useState("http://localhost:9545");
+  const [resetAnvil, setResetAnvil] = useState(0);
+  provider = createPublicClient({
+    transport: http(networkUrl),
+  });
 
-  /*//////////////////////////////////////////////////////////////
-                             CONTRACT FILES
-    //////////////////////////////////////////////////////////////*/
-  const [pwd, setPwd] = useState(); // current working directory
-  const [contractFiles, setContractFiles] = useState<
-    { contractName: string; contractFilePath: string; basename: string }[]
-  >([]); // deployable contracts sources from {pwd}/src folder
-  const [currentContractFileIndex, setCurrentContractFileIndex] = useState(0); // current contract to deploy
+  const [pwd, setPwd] = useState();
+  const [contractFiles, setContractFiles] = useState<ContractFileData[]>([]);
+  const [currentContractFileIndex, setCurrentContractFileIndex] = useState(0);
   const [currentContractJsonData, setCurrentContractJsonData] =
-    useState<any>(null); // current contract json data (abi, bytecode,...etc) from {pwd}/out folder
-  const [constructorInputs, setConstructorInputs] = useState<FuncState>();
+    useState<any>(null);
+  const [constructorInputs, setConstructorInputs] = useState<
+    FuncState | undefined
+  >(undefined);
   const [deployedContract, setDeployedContract] = useState<DeployedContract[]>(
     []
   );
 
-  /*//////////////////////////////////////////////////////////////
-                               ETH INPUT
-    //////////////////////////////////////////////////////////////*/
-  const [ethValue, setEthValue] = useState<string>(""); // default eth value to send with the transaction
+  const [ethValue, setEthValue] = useState<string>("");
   const [ethFormat, setEthFormat] = useState<string>(
     ETHFormat[0].toUpperCase()
-  ); // default format to send with the transaction
+  );
 
   const [logData, setLogData] = useState<LogData[]>([]);
   const [atAddress, setAtAddress] = useState("");
   const [showCheck, setShowCheck] = useState(false);
+  const [_, setProjectType] = useState(ProjectType.none);
 
   window.addEventListener("message", (event) => {
     const { id, data } = event.data;
@@ -113,105 +119,28 @@ function App() {
       setPwd(data);
     } else if (id === MessageId.getAbi) {
       setCurrentContractJsonData(data);
-      setConstructorInputs(buildInitialConstructorState(data.abi[0])); // setting constructor input state
+      setConstructorInputs(buildInitialConstructorState(data.abi[0]));
     } else if (id === MessageId.buildCommandRunSuccess) {
       setShowCheck(true);
       setTimeout(() => setShowCheck(false), 3000);
       getAbiMessage();
+    } else if (id === MessageId.getProjectType) {
+      setProjectType(data);
     }
   });
-
-  function buildInitialConstructorState(abi: ABIEntry): FuncState | undefined {
-    if (abi.type !== "constructor") return undefined;
-    return {
-      name: "constructor",
-      stateMutability: abi.stateMutability,
-      inputs: (abi.inputs || []).map((input) => ({
-        name: input.name,
-        type: input.type,
-        value: "",
-      })),
-    };
-  }
-
-  function buildFunctionStatesFromABI(abi: any[]): FuncState[] {
-    let result = abi
-      .filter((item) => item.type === "function")
-      .map(
-        (func): FuncState => ({
-          name: func.name,
-          stateMutability: func.stateMutability,
-          inputs: func.inputs.map((input: any) => {
-            const base: any = {
-              name: input.name,
-              type: input.type,
-              value: "",
-            };
-
-            if (input.type === "tuple" || input.type === "tuple[]") {
-              base.components = input.components.map((c: any) => ({
-                name: c.name,
-                type: c.type,
-                value: "",
-              }));
-            }
-
-            return base;
-          }),
-          outputs: func.outputs.map((output: any) => ({
-            name: output.name,
-            type: output.type,
-            value: "",
-          })),
-        })
-      );
-
-    const priority: {
-      [key in "nonpayable" | "payable" | "view" | "pure"]: number;
-    } = {
-      nonpayable: 0,
-      payable: 1,
-      view: 2,
-      pure: 3,
-    };
-
-    result.sort(
-      (a: FuncState, b: FuncState) =>
-        (priority[a.stateMutability as keyof typeof priority] ?? 99) -
-        (priority[b.stateMutability as keyof typeof priority] ?? 99)
-    );
-
-    const hasFallback = abi.some((item) => item.type === "fallback");
-    const hasReceive = abi.some((item) => item.type === "receive");
-
-    if (hasFallback || hasReceive) {
-      result.push({
-        name: "low-level",
-        stateMutability: "payable",
-        inputs: [
-          {
-            name: "calldata",
-            type: "bytes",
-            value: "",
-          },
-        ],
-        outputs: [],
-      });
-    }
-
-    return result;
-  }
 
   useEffect(() => {
     vscode.postMessage({
       id: MessageId.runBuildCommand,
     });
-
     vscode.postMessage({
       id: MessageId.getSolFiles,
     });
     vscode.postMessage({
       id: MessageId.getCurrentWorkingDirectory,
+    });
+    vscode.postMessage({
+      id: MessageId.getProjectType,
     });
     getAbiMessage();
     vscode.postMessage({
@@ -368,14 +297,6 @@ function App() {
         return;
       }
     }
-  }
-
-  function stringifyWithBigInt(obj: any) {
-    return JSON.stringify(
-      obj,
-      (_, value) => (typeof value === "bigint" ? value.toString() : value),
-      2 // pretty-print with 2-space indent
-    );
   }
 
   async function handleFunctionCall(
@@ -540,10 +461,8 @@ function App() {
       try {
         let rawOutput: any = undefined;
         let decodedOutput: any = undefined;
-        consoleLog("here");
-        consoleLog(`function data: ${JSON.stringify(functionData)}`);
+
         if (functionData.outputs && functionData.outputs.length > 0) {
-          consoleLog(`rawCallData: ${rawCallData}`);
           rawOutput = await provider.call({
             to: contractAddress as `0x${string}`,
             data: rawCallData,
@@ -556,7 +475,6 @@ function App() {
             functionName: functionData.name,
             data: `${rawOutput.data}` as `0x${string}`,
           });
-          consoleLog(`decodedOutput: ${stringifyWithBigInt(decodedOutput)}`);
         }
 
         if (
@@ -650,51 +568,10 @@ function App() {
     }
   }
 
-  function updateInputValue(
-    prev: DeployedContract[],
-    contractIndex: number,
-    functionIndex: number,
-    inputIndex: number,
-    newValue: string
-  ): DeployedContract[] {
-    const updated = [...prev];
-    updated[contractIndex] = { ...updated[contractIndex] };
-    updated[contractIndex].functions = [...updated[contractIndex].functions];
-    updated[contractIndex].functions[functionIndex] = {
-      ...updated[contractIndex].functions[functionIndex],
-    };
-    updated[contractIndex].functions[functionIndex].inputs = [
-      ...updated[contractIndex].functions[functionIndex].inputs,
-    ];
-    updated[contractIndex].functions[functionIndex].inputs[inputIndex] = {
-      ...updated[contractIndex].functions[functionIndex].inputs[inputIndex],
-      value: newValue,
-    };
-
-    return updated;
-  }
-
   function handleCloseContractTab(indexToRemove: number) {
     setDeployedContract((prev) =>
       prev.filter((_, index) => index !== indexToRemove)
     );
-  }
-
-  function updateOutputValue(
-    prev: DeployedContract[],
-    contractIndex: number,
-    functionIndex: number,
-    newValue: Output[]
-  ): DeployedContract[] {
-    const updated = [...prev];
-    updated[contractIndex] = { ...updated[contractIndex] };
-    updated[contractIndex].functions = [...updated[contractIndex].functions];
-    updated[contractIndex].functions[functionIndex] = {
-      ...updated[contractIndex].functions[functionIndex],
-      outputs: newValue,
-    };
-
-    return updated;
   }
 
   const updateWalletBalance = () => {
@@ -710,12 +587,6 @@ function App() {
 
       return updatedWallets;
     });
-  };
-
-  const handleCopy = async (address: string) => {
-    try {
-      await navigator.clipboard.writeText(address);
-    } catch (err) {}
   };
 
   const handleAtAddress = async () => {
@@ -759,19 +630,7 @@ function App() {
       >
         <h1>SlotMatrix</h1>
         {showCheck && (
-          <div
-            style={{
-              marginLeft: "12px",
-              backgroundColor: "#5ece00",
-              borderRadius: "50%",
-              display: "flex",
-              padding: "4px",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "22px",
-              height: "22px",
-            }}
-          >
+          <div className="green-check">
             <i
               className="codicon codicon-check-all"
               style={{
@@ -797,124 +656,33 @@ function App() {
         <VscodeScrollable
           style={{ width: "25%", paddingRight: "12px", height: "500px" }}
         >
-          <div>
-            {/* wallets  */}
-            <div style={{ display: "flex", flexDirection: "row" }}>
-              <div className="heading">Wallets</div>
-              <div
-                className="icon "
-                style={{ marginLeft: "4px", cursor: "pointer" }}
-                onClick={() => handleCopy(wallets[currentWallet].publicKey)}
-              >
-                <i className="codicon codicon-copy icon"></i>
-              </div>
-            </div>
-            <VscodeSingleSelect
-              value={currentWallet.toString()}
-              onChange={(event) => {
-                setCurrentWallet(
-                  parseInt((event.target as HTMLSelectElement).value)
-                );
-              }}
-              style={{ marginBottom: "12px", width: "100%" }}
-            >
-              {wallets.map((account, index) => (
-                <VscodeOption
-                  key={`${account.publicKey}-${account.balance}`}
-                  value={index.toString()}
-                  selected={index === currentWallet}
-                >
-                  {`${account.publicKey.slice(
-                    0,
-                    6
-                  )}...${account.publicKey.slice(-6)}  (${
-                    account.balance
-                  } ETH)`}
-                </VscodeOption>
-              ))}
-            </VscodeSingleSelect>
-          </div>
+          {/* network  */}
+          <Network updateRpcUrl={setNetworkUrl} resetAnvil={resetAnvil} />
+          {/* wallets  */}
+          <Wallets
+            wallets={wallets}
+            currentWallet={currentWallet}
+            updateCurrentWallet={setCurrentWallet}
+          />
 
           {/* deployable contract  */}
-          <div>
-            <div className="heading ">Deployable Contract</div>
-
-            <VscodeSingleSelect
-              onChange={(event) => {
-                setCurrentContractFileIndex(
-                  JSON.parse((event.target as HTMLSelectElement).value)
-                );
-              }}
-              style={{ marginBottom: "12px", width: "100%" }}
-            >
-              {contractFiles.length !== 0 &&
-                contractFiles.map((file, index) => (
-                  <VscodeOption key={index} value={index.toString()}>
-                    {file.basename + ":" + file.contractName}
-                  </VscodeOption>
-                ))}
-            </VscodeSingleSelect>
-          </div>
+          <DeployableContracts
+            contractFiles={contractFiles}
+            updateSelectedContractIndex={setCurrentContractFileIndex}
+          />
 
           {/* eth value  */}
-          <div>
-            <div className="heading">ETH Value</div>
-            <VscodeTextfield
-              type="number"
-              value={ethValue}
-              min={0}
-              placeholder="ETH Value"
-              onChange={(event) => {
-                const value = Number((event.target as HTMLInputElement).value);
-                setEthValue(value.toString());
-              }}
-              style={{ marginBottom: "12px", width: "100%" }}
-            />
-
-            <div>
-              <VscodeSingleSelect
-                onChange={(event) => {
-                  setEthFormat((event.target as HTMLSelectElement).value);
-                }}
-                style={{ marginBottom: "12px", width: "100%" }}
-              >
-                {ETHFormat.map((format, index) => {
-                  return (
-                    <VscodeOption key={index} value={format}>
-                      {format.toLocaleUpperCase()}
-                    </VscodeOption>
-                  );
-                })}
-              </VscodeSingleSelect>
-            </div>
-          </div>
+          <ETHInput
+            ethValue={ethValue}
+            updateETHFormat={setEthFormat}
+            updateETHValue={setEthValue}
+          />
 
           {/* constructor inputs */}
-          {constructorInputs !== undefined &&
-            constructorInputs.inputs.length > 0 && (
-              <div>
-                <div className="heading">Constructor Input</div>
-                {constructorInputs.inputs.map((input, index) => {
-                  return (
-                    <>
-                      <div style={{ marginBottom: "4px" }}>{input.name} : </div>
-                      <VscodeTextfield
-                        key={index}
-                        value={input.value}
-                        placeholder={input.type}
-                        onChange={(event) => {
-                          handleInputChange(
-                            index,
-                            (event.target as HTMLInputElement).value
-                          );
-                        }}
-                        style={{ marginBottom: "12px", width: "100%" }}
-                      />
-                    </>
-                  );
-                })}
-              </div>
-            )}
+          <ConstructorInput
+            constructorAbiFormat={constructorInputs}
+            handleInputChange={handleInputChange}
+          />
           {/* deploy button */}
 
           <VscodeButton
@@ -951,61 +719,15 @@ function App() {
           </VscodeButton>
         </VscodeScrollable>
 
-        <div
-          style={{
-            width: "75%",
-            borderLeft: "1px solid gray",
-            paddingLeft: "12px",
-            display: "flex",
-            flexDirection: "column",
+        <LogSection
+          logData={logData}
+          resetLogs={() => setLogData([])}
+          resetDeployedContract={() => setDeployedContract([])}
+          resetWallets={() => {
+            setWalletData(AnvilKeys);
+            setResetAnvil(resetAnvil + 1);
           }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginBottom: "8px",
-              alignItems: "center",
-            }}
-          >
-            <div className="heading" style={{ marginBottom: "0px" }}>
-              Logs
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "row" }}>
-              <div
-                className="icon "
-                onClick={() => {
-                  setLogData([]);
-                }}
-                style={{ cursor: "pointer", marginRight: "12px" }}
-                title="Clear logs"
-              >
-                <i className="codicon codicon-circle-slash"></i>
-              </div>
-              <div
-                className="icon "
-                onClick={() => {
-                  setLogData([]);
-                  setDeployedContract([]);
-                  setWalletData(AnvilKeys);
-                  vscode.postMessage({
-                    id: MessageId.restartAnvil,
-                  });
-                }}
-                style={{ cursor: "pointer" }}
-                title="Reset all"
-              >
-                <i className="codicon codicon-clear-all"></i>
-              </div>
-            </div>
-          </div>
-          <VscodeDivider />
-          <VscodeScrollable style={{ height: "450px" }}>
-            <Log logData={logData} />
-          </VscodeScrollable>
-        </div>
+        />
       </div>
 
       {/* functions of contract and interactions  */}
