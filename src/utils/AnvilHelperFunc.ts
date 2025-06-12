@@ -4,19 +4,30 @@ import * as vscode from "vscode";
 let anvilProcess: ChildProcessWithoutNullStreams | null = null;
 const ANVIL_PORT = "9545";
 
-export function startAnvil(port = ANVIL_PORT) {
+export function startAnvil(command: string) {
+  console.log(`log : ${command}`);
   if (anvilProcess) {
-    vscode.window.showInformationMessage("Anvil is already running.");
-    return;
+    stopAnvil();
   }
 
-  anvilProcess = spawn("anvil", ["--port", `${port}`, "--steps-tracing"]);
+  // Parse command to get arguments
+  const args = command
+    .replace(/^anvil\s+/, "")
+    .trim()
+    .split(/\s+/);
+
+  // Add steps-tracing if not already present
+  if (!args.includes("--steps-tracing")) {
+    args.push("--steps-tracing");
+  }
+  console.log(`log : ${args}`);
+  anvilProcess = spawn("anvil", args);
 
   anvilProcess.stdout.on("data", (data) => {
     const output = data.toString();
     if (output.includes("Listening on")) {
       vscode.window.showInformationMessage(
-        `Anvil started successfully on port ${port}`
+        `Anvil started successfully on port ${ANVIL_PORT}`
       );
     }
   });
@@ -32,13 +43,12 @@ export function startAnvil(port = ANVIL_PORT) {
 
   anvilProcess.on("exit", (code) => {
     console.log(`Anvil exited with code ${code}`);
-    anvilProcess = null;
   });
 }
 
-export function restartAnvil(port = ANVIL_PORT) {
+export function restartAnvil() {
   stopAnvil();
-  startAnvil(port);
+  // startAnvil(port);
 }
 
 export function stopAnvil() {

@@ -19,6 +19,8 @@ export const MessageId = {
   getCurrentWorkingDirectory: "getCurrentWorkingDirectory",
   getProjectType: "getProjectType",
   createFoundryTomlFile: "createFoundryTomlFile",
+
+  test: "test",
 };
 
 export const Terminals = {

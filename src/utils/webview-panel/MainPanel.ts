@@ -94,8 +94,8 @@ export const slotMatrixMainPanel = (
           runBuildCommand(panel);
           break;
         case MessageId.createTerminal:
-          if (message.data === Terminals.anvilTerminal) {
-            startAnvil();
+          if (message.data.type === Terminals.anvilTerminal) {
+            startAnvil(message.data.command);
           }
           break;
         case MessageId.restartAnvil:

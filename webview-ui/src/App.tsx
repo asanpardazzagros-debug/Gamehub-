@@ -75,7 +75,7 @@ export const vscode = isVSCode
       },
     };
 
-export const provider = createPublicClient({
+export let provider = createPublicClient({
   chain: anvil,
   transport: http("http://localhost:9545"),
 });
@@ -83,6 +83,11 @@ export const provider = createPublicClient({
 function App() {
   const [currentWallet, setCurrentWallet] = useState(0);
   const [wallets, setWalletData] = useState<WalletData[]>(AnvilKeys);
+  const [networkUrl, setNetworkUrl] = useState("http://localhost:9545");
+  const [resetAnvil, setResetAnvil] = useState(0);
+  provider = createPublicClient({
+    transport: http(networkUrl),
+  });
 
   const [pwd, setPwd] = useState();
   const [contractFiles, setContractFiles] = useState<ContractFileData[]>([]);
@@ -652,7 +657,7 @@ function App() {
           style={{ width: "25%", paddingRight: "12px", height: "500px" }}
         >
           {/* network  */}
-          <Network />
+          <Network updateRpcUrl={setNetworkUrl} resetAnvil={resetAnvil} />
           {/* wallets  */}
           <Wallets
             wallets={wallets}
@@ -718,7 +723,10 @@ function App() {
           logData={logData}
           resetLogs={() => setLogData([])}
           resetDeployedContract={() => setDeployedContract([])}
-          resetWallets={() => setWalletData(AnvilKeys)}
+          resetWallets={() => {
+            setWalletData(AnvilKeys);
+            setResetAnvil(resetAnvil + 1);
+          }}
         />
       </div>
 
