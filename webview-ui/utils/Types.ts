@@ -1,3 +1,5 @@
+import { Hex } from "viem";
+
 //used while taking input from user
 export type Input = {
   name: string;
@@ -83,4 +85,10 @@ export type StorageLayout = {
       value?: string; // optional, e.g. for mappings
     };
   };
+};
+
+export type ContractJsonData = {
+  abi: any;
+  bytecode: Hex;
+  storageLayout: StorageLayout;
 };

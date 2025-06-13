@@ -13,7 +13,7 @@ import { vscode } from "../src/App";
 export function consoleLog(message: string) {
   vscode.postMessage({
     id: MessageId.log,
-    data: message,
+    data: `from frontend : ${message}`,
   });
 }
 
