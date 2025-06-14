@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import { MessageId } from "../MessageId";
 
 let commandTerminal: vscode.Terminal | undefined = undefined;
@@ -80,5 +80,22 @@ export function disposeCommandTerminal() {
   if (commandTerminal !== undefined) {
     commandTerminal.dispose();
     commandTerminal = undefined;
+  }
+}
+
+export function isFoundryInstalledSync(): boolean {
+  try {
+    const result = spawnSync("forge", ["--version"], {
+      encoding: "utf8",
+      timeout: 5000,
+      stdio: "pipe",
+      shell: true,
+    });
+
+    return (
+      result.status === 0 && !!result.stdout && result.stdout.trim().length > 0
+    );
+  } catch {
+    return false;
   }
 }

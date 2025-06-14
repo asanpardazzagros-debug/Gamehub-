@@ -16,6 +16,7 @@ import ConstructorInput from "./components/second-components/ConstructorInput";
 import { AnvilKeys } from "../utils/AnvilKeys";
 import Wallets from "./components/second-components/Wallets";
 import AtAddress from "./components/second-components/AtAddress";
+import FoundryInstallMessage from "./components/second-components/FoundryInstallMessage";
 
 /**
  *
@@ -27,6 +28,7 @@ import AtAddress from "./components/second-components/AtAddress";
 
 const SecondApp = () => {
   const [projectType, setProjectType] = useState(ProjectType.none);
+  const [isFoundryInstalled, setIsFoundryInstalled] = useState(false);
   const [pwd, setPwd] = useState("/");
   const [showCheck, setShowCheck] = useState(false);
   const [solFiles, setSolFiles] = useState<ContractFileData[]>([]);
@@ -68,6 +70,9 @@ const SecondApp = () => {
         setTimeout(() => setShowCheck(false), 3000);
         fetchAbi();
         break;
+      case MessageId.isFoundryInstalled:
+        setIsFoundryInstalled(data);
+        break;
     }
   });
 
@@ -100,6 +105,9 @@ const SecondApp = () => {
     vscode.postMessage({
       id: MessageId.getProjectType,
     });
+    vscode.postMessage({
+      id: MessageId.isFoundryInstalled,
+    });
   }, []);
 
   useEffect(() => {
@@ -126,6 +134,37 @@ const SecondApp = () => {
     });
   }
 
+  if (!isFoundryInstalled) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+        }}
+      >
+        {/* header  */}
+        <Header showCheck={showCheck} />
+        <FoundryInstallMessage />
+      </div>
+    );
+  }
+
+  if (projectType === ProjectType.none) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+        }}
+      >
+        {/* header  */}
+        <Header showCheck={showCheck} />
+        <ProjectTypeNone />
+      </div>
+    );
+  }
   return (
     <div
       style={{
@@ -136,43 +175,36 @@ const SecondApp = () => {
     >
       {/* header  */}
       <Header showCheck={showCheck} />
+      <div
+        style={{
+          height: "60%",
+          display: "flex",
+          flexShrink: 0,
+          flexDirection: "row",
+        }}
+      >
+        <div style={{ width: "20%" }}>
+          {constructorInput !== undefined && (
+            <ActivityBar
+              wallets={wallets}
+              selectedWallet={selectedWallet}
+              setSelectedWallet={setSelectedWallet}
+              solFiles={solFiles}
+              setSelectedSolFile={setSelectedSolFile}
+              constructorInput={constructorInput}
+              handleInputChange={handleInputChange}
+              atAddress={atAddress}
+              handleAtAddressButton={handleAtAddressButton}
+              updateAtAddress={setAtAddress}
+            />
+          )}
+        </div>
+        <div style={{ width: "80%" }}>logs</div>
+      </div>
 
-      {projectType === ProjectType.none ? (
-        <ProjectTypeNone />
-      ) : (
-        <>
-          <div
-            style={{
-              height: "60%",
-              display: "flex",
-              flexShrink: 0,
-              flexDirection: "row",
-            }}
-          >
-            <div style={{ width: "20%" }}>
-              {constructorInput !== undefined && (
-                <ActivityBar
-                  wallets={wallets}
-                  selectedWallet={selectedWallet}
-                  setSelectedWallet={setSelectedWallet}
-                  solFiles={solFiles}
-                  setSelectedSolFile={setSelectedSolFile}
-                  constructorInput={constructorInput}
-                  handleInputChange={handleInputChange}
-                  atAddress={atAddress}
-                  handleAtAddressButton={handleAtAddressButton}
-                  updateAtAddress={setAtAddress}
-                />
-              )}
-            </div>
-            <div style={{ width: "80%" }}>logs</div>
-          </div>
-
-          <div style={{}}>
-            <div>Deployed contract line 1</div>
-          </div>
-        </>
-      )}
+      <div style={{}}>
+        <div>Deployed contract line 1</div>
+      </div>
     </div>
   );
 };

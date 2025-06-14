@@ -2,44 +2,49 @@ body {
   margin: 20px;
   font-family: monospace;
 }
+
 .project-type-none {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  font-size: 16px;
-  line-height: 1.6;
-  border: 2px dashed #d1d5db;
+  height: 80%;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 2px dashed #444444;
   border-radius: 12px;
-  margin: 20px;
-  padding: 40px;
+
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
+  background-color: #1e1e1e;
+  color: #cccccc;
 }
 
 .project-type-none .emoji {
-  font-size: 48px;
+  font-size: 40px;
   margin-bottom: 16px;
 }
 
 .project-type-none .title {
-  font-size: 20px;
+  font-size: 18px;
   margin-bottom: 12px;
+  color: #ffffff;
 }
 
 .project-type-none .title strong {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .project-type-none .subtitle {
-  font-size: 16px;
+  font-size: 15px;
   margin-bottom: 20px;
+  color: #d4d4d4;
 }
 
 .project-type-none .subtitle strong {
   font-weight: 600;
+  color: #569cd6;
 }
 
 .project-type-none .instructions {
@@ -48,20 +53,133 @@ body {
 }
 
 .project-type-none .instruction-item {
-  margin-bottom: 12px;
-  line-height: 1.5;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  font-size: 14px;
+  color: #cccccc;
 }
 
 .project-type-none .instruction-item strong {
- 
   font-weight: 600;
+  color: #569cd6;
 }
 
 .project-type-none code {
-  background-color: #e5e7eb;
-  color: #374151;
+  background-color: #2d2d30;
+  color: #ce9178;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
+  border: 1px solid #444444;
+}
+
+.foundry-install {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80%;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 2px dashed #444444;
+  border-radius: 12px;
+
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  background-color: #1e1e1e;
+  color: #cccccc;
+}
+
+.foundry-install .emoji {
+  font-size: 40px;
+  margin-bottom: 16px;
+}
+
+.foundry-install .title {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #ffffff;
+}
+
+.foundry-install .title strong {
+  font-weight: 700;
+}
+
+.foundry-install .subtitle {
+  font-size: 15px;
+  margin-bottom: 20px;
+  color: #d4d4d4;
+}
+
+.foundry-install .subtitle strong {
+  font-weight: 600;
+  color: #569cd6;
+}
+
+.foundry-install .instructions {
+  text-align: left;
+  max-width: 600px;
+}
+
+.foundry-install .instruction-item {
+  margin-bottom: 10px;
+  line-height: 1.4;
+  font-size: 14px;
+  color: #cccccc;
+}
+
+.foundry-install .instruction-item strong {
+  font-weight: 600;
+  color: #569cd6;
+}
+
+.foundry-install code {
+  background-color: #2d2d30;
+  color: #ce9178;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #444444;
+}
+
+.foundry-install .command-block {
+  margin: 8px 0;
+  padding: 12px;
+  background-color: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.foundry-install .command-block code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 13px;
+  color: #d7ba7d;
+  border: none;
+}
+
+.foundry-install .link {
+  color: #4fc1ff;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.foundry-install .link:hover {
+  text-decoration: underline;
+  color: #74c0fc;
+}
+
+.foundry-install .quote {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #2d2d30;
+  border-left: 4px solid #007acc;
+  border-radius: 4px;
+  font-style: italic;
+  text-align: left;
+  font-size: 13px;
 }

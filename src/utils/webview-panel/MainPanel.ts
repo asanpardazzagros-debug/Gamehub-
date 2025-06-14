@@ -8,7 +8,11 @@ import {
   ProjectType,
 } from "../../MessageId";
 import { restartAnvil, startAnvil, stopAnvil } from "../AnvilHelperFunc";
-import { disposeCommandTerminal, runBuildCommand } from "../CommandHelperFunc";
+import {
+  disposeCommandTerminal,
+  isFoundryInstalledSync,
+  runBuildCommand,
+} from "../CommandHelperFunc";
 import {
   getAllDeployableContracts,
   isFoundryOrHardhatProject,
@@ -144,6 +148,13 @@ export const slotMatrixMainPanel = (
           panel.webview.postMessage({
             id: MessageId.getProjectType,
             data: projectType,
+          });
+          break;
+        case MessageId.isFoundryInstalled:
+          const isInstalled = isFoundryInstalledSync();
+          panel.webview.postMessage({
+            id: MessageId.isFoundryInstalled,
+            data: isInstalled,
           });
           break;
       }
