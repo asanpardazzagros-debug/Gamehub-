@@ -1,43 +1,50 @@
 import { VscodeTextfield } from "@vscode-elements/react-elements";
 import { FuncState } from "../../utils/Types";
 
-type ConstructorInputProps = {
-  constructorAbiFormat: FuncState | undefined;
-  handleInputChange: (index: number, value: string) => void;
-};
-
 const ConstructorInput = ({
-  constructorAbiFormat,
-  handleInputChange,
-}: ConstructorInputProps) => {
+  inputState,
+  setConstructorInput,
+}: {
+  inputState: FuncState;
+  setConstructorInput: React.Dispatch<
+    React.SetStateAction<FuncState | undefined>
+  >;
+}) => {
   return (
     <div>
-      {constructorAbiFormat !== undefined &&
-        constructorAbiFormat.inputs.length > 0 && (
-          <div>
-            <div className="heading">Constructor Input</div>
-            {constructorAbiFormat.inputs.map((input, index) => {
-              return (
-                <>
-                  <div style={{ marginBottom: "4px" }}>{input.name} : </div>
-                  <VscodeTextfield
-                    key={index}
-                    value={input.value}
-                    placeholder={input.type}
-                    onChange={(event) => {
-                      handleInputChange(
-                        index,
-                        (event.target as HTMLInputElement).value
+      {inputState.inputs.length > 0 && (
+        <div>
+          <div className="heading">Constructor Input</div>
+          {inputState.inputs.map((input, index) => {
+            return (
+              <>
+                <div style={{ marginBottom: "4px" }}>{input.name} : </div>
+                <VscodeTextfield
+                  key={index}
+                  value={input.value}
+                  placeholder={input.type}
+                  onChange={(event) => {
+                    const value = (event.target as HTMLInputElement).value;
+                    setConstructorInput((prevState: FuncState | undefined) => {
+                      if (!prevState) return prevState;
+                      const updatedInputs = prevState.inputs.map((input, idx) =>
+                        idx === index ? { ...input, value } : input
                       );
-                    }}
-                    style={{ marginBottom: "12px", width: "100%" }}
-                  />
-                </>
-              );
-            })}
-          </div>
-        )}
+                      return {
+                        ...prevState,
+                        inputs: updatedInputs,
+                      };
+                    });
+                  }}
+                  style={{ marginBottom: "12px", width: "100%" }}
+                />
+              </>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
+
 export default ConstructorInput;

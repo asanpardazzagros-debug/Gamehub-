@@ -11,7 +11,7 @@ const AtAddress = ({
   updateAtAddress: (value: string) => void;
 }) => {
   return (
-    <div>
+    <div style={{ marginBottom: "12px" }}>
       <VscodeTextfield
         value={atAddress}
         placeholder="Load contract from address"

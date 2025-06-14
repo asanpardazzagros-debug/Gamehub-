@@ -2,7 +2,7 @@ import {
   VscodeOption,
   VscodeSingleSelect,
 } from "@vscode-elements/react-elements";
-import { ContractFileData } from "../../../utils/Types";
+import { ContractFileData } from "../../utils/Types";
 
 const SolFileDrop = ({
   solFiles,
@@ -12,7 +12,7 @@ const SolFileDrop = ({
   updateSelectedFile: (index: number) => void;
 }) => {
   return (
-    <div>
+    <div style={{ marginBottom: "12px" }}>
       <div className="heading">Deployable Contract</div>
       <VscodeSingleSelect
         onChange={(event) => {
@@ -20,6 +20,7 @@ const SolFileDrop = ({
             parseInt((event.target as HTMLInputElement).value)
           );
         }}
+        style={{ width: "100%" }}
       >
         {solFiles.map((file, index) => (
           <VscodeOption key={index} value={index.toString()}>

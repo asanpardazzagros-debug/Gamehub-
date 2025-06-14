@@ -30,9 +30,9 @@ export type DeployedContract = {
   address: string;
   functions: FuncState[];
   abi: any;
-  balance: string;
   refreshTick: number;
   storageLayout: any;
+  balance: string;
 };
 
 export type LogData = {
@@ -91,4 +91,9 @@ export type ContractJsonData = {
   abi: any;
   bytecode: Hex;
   storageLayout: StorageLayout;
+};
+
+export type ETHInputDataType = {
+  ethValue: number;
+  ethFormat: number;
 };

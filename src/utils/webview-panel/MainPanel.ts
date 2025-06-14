@@ -103,7 +103,7 @@ export const slotMatrixMainPanel = (
           }
           break;
         case MessageId.restartAnvil:
-          restartAnvil();
+          restartAnvil(message.data);
           break;
 
         // ---- FILES ----
