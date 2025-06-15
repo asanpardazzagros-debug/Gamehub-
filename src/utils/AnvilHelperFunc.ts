@@ -2,36 +2,61 @@ import { spawn, exec, ChildProcessWithoutNullStreams } from "child_process";
 import { promisify } from "util";
 import * as net from "net";
 import * as vscode from "vscode";
+import * as os from "os";
 
 const execAsync = promisify(exec);
 
 let anvilProcess: ChildProcessWithoutNullStreams | null = null;
 const ANVIL_PORT = 9545;
 
-// Helper function to kill process by PID with retries
+// Helper function to get the correct anvil command for the platform
+function getAnvilCommand(): string {
+  return os.platform() === "win32" ? "anvil.exe" : "anvil";
+}
+
+// Cross-platform process killing
 async function killProcessWithRetry(
   pid: string,
   maxRetries: number = 3
 ): Promise<void> {
+  const isWindows = os.platform() === "win32";
+
   for (let i = 0; i < maxRetries; i++) {
     try {
-      // First try SIGTERM
-      await execAsync(`kill -TERM ${pid}`);
-      console.log(`Sent SIGTERM to PID ${pid}`);
+      if (isWindows) {
+        // Windows: Use taskkill
+        try {
+          // First try graceful termination
+          await execAsync(`taskkill /PID ${pid} /T`);
+          console.log(`Sent termination signal to PID ${pid}`);
+        } catch {
+          // If graceful fails, force kill
+          await execAsync(`taskkill /F /PID ${pid} /T`);
+          console.log(`Force killed PID ${pid}`);
+        }
+      } else {
+        // Unix: Use kill command
+        await execAsync(`kill -TERM ${pid}`);
+        console.log(`Sent SIGTERM to PID ${pid}`);
 
-      // Wait and check if process is still alive
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Wait and check if process is still alive
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      try {
-        await execAsync(`kill -0 ${pid}`); // Check if process exists
-        console.log(`PID ${pid} still alive, trying SIGKILL`);
-        await execAsync(`kill -KILL ${pid}`);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      } catch {
-        // Process is dead
-        console.log(`PID ${pid} successfully killed`);
-        return;
+        try {
+          await execAsync(`kill -0 ${pid}`); // Check if process exists
+          console.log(`PID ${pid} still alive, trying SIGKILL`);
+          await execAsync(`kill -KILL ${pid}`);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch {
+          // Process is dead
+          console.log(`PID ${pid} successfully killed`);
+          return;
+        }
       }
+
+      // Wait a bit and verify process is gone
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return;
     } catch (err) {
       console.log(`Attempt ${i + 1} to kill PID ${pid} failed:`, err);
       if (i === maxRetries - 1) {
@@ -42,32 +67,94 @@ async function killProcessWithRetry(
   }
 }
 
-// More aggressive port cleanup
+// Cross-platform port process detection and cleanup
 async function forceKillPortProcesses(): Promise<void> {
   console.log(`Checking for processes on port ${ANVIL_PORT}...`);
+  const isWindows = os.platform() === "win32";
 
   try {
-    // Try multiple approaches to find processes
-    const commands = [
-      `lsof -ti:${ANVIL_PORT}`,
-      `netstat -tlnp 2>/dev/null | grep :${ANVIL_PORT} | awk '{print $7}' | cut -d'/' -f1`,
-      `ss -tlnp | grep :${ANVIL_PORT} | grep -oP 'pid=\\K[0-9]+'`,
-    ];
+    let commands: string[] = [];
+
+    if (isWindows) {
+      // Windows commands to find processes using the port
+      commands = [
+        `netstat -ano | findstr :${ANVIL_PORT}`,
+        `Get-Process | Where-Object {$_.ProcessName -eq "anvil"} | Select-Object -ExpandProperty Id`, // PowerShell fallback
+      ];
+    } else {
+      // Unix commands
+      commands = [
+        `lsof -ti:${ANVIL_PORT}`,
+        `netstat -tlnp 2>/dev/null | grep :${ANVIL_PORT} | awk '{print $7}' | cut -d'/' -f1`,
+        `ss -tlnp | grep :${ANVIL_PORT} | grep -oP 'pid=\\K[0-9]+'`,
+      ];
+    }
 
     const allPids = new Set<string>();
 
     for (const cmd of commands) {
       try {
-        const { stdout } = await execAsync(cmd);
-        const pids = stdout
-          .trim()
-          .split("\n")
-          .filter((pid) => pid && pid !== "");
-        pids.forEach((pid) => allPids.add(pid));
+        const { stdout } = await execAsync(cmd, {
+          shell: isWindows ? "cmd.exe" : "/bin/sh",
+        });
+
+        if (isWindows && cmd.includes("netstat")) {
+          // Parse Windows netstat output
+          const lines = stdout.trim().split("\n");
+          for (const line of lines) {
+            const parts = line.trim().split(/\s+/);
+            const pid = parts[parts.length - 1];
+            if (pid && pid !== "0" && /^\d+$/.test(pid)) {
+              allPids.add(pid);
+            }
+          }
+        } else {
+          // Parse Unix output or PowerShell output
+          const pids = stdout
+            .trim()
+            .split("\n")
+            .filter((pid) => pid && pid !== "" && /^\d+$/.test(pid.trim()));
+          pids.forEach((pid) => allPids.add(pid.trim()));
+        }
       } catch (err: any) {
         // Command failed, try next one
         console.log(`Command "${cmd}" failed:`, err.message);
       }
+    }
+
+    // Additional check for anvil processes by name
+    try {
+      const anvilCmd = isWindows
+        ? `tasklist /FI "IMAGENAME eq anvil.exe" /FO CSV | findstr anvil`
+        : `pgrep -f anvil`;
+
+      const { stdout } = await execAsync(anvilCmd, {
+        shell: isWindows ? "cmd.exe" : "/bin/sh",
+      });
+
+      if (isWindows) {
+        // Parse CSV output from tasklist
+        const lines = stdout.trim().split("\n");
+        for (const line of lines) {
+          if (line.includes("anvil")) {
+            const parts = line.split(",");
+            if (parts.length >= 2) {
+              const pid = parts[1].replace(/"/g, "").trim();
+              if (/^\d+$/.test(pid)) {
+                allPids.add(pid);
+              }
+            }
+          }
+        }
+      } else {
+        const pids = stdout
+          .trim()
+          .split("\n")
+          .filter((pid) => pid && /^\d+$/.test(pid));
+        pids.forEach((pid) => allPids.add(pid));
+      }
+    } catch (err: any) {
+      console.log("Failed to find anvil processes by name:", err.message);
     }
 
     if (allPids.size > 0) {
@@ -161,12 +248,21 @@ export async function startAnvil(command: string): Promise<void> {
 
     console.log(`Starting Anvil with args:`, args);
 
+    const anvilCmd = getAnvilCommand();
+    const isWindows = os.platform() === "win32";
+
     // Step 5: Start the process with proper error handling
     return new Promise((resolve, reject) => {
-      anvilProcess = spawn("anvil", args, {
+      const spawnOptions: any = {
         stdio: ["pipe", "pipe", "pipe"],
-        shell: false,
-      });
+        shell: isWindows,
+      };
+
+      if (isWindows) {
+        spawnOptions.windowsHide = true;
+      }
+
+      anvilProcess = spawn(anvilCmd, args, spawnOptions);
 
       let resolved = false;
       let startupTimer: NodeJS.Timeout;
@@ -186,7 +282,11 @@ export async function startAnvil(command: string): Promise<void> {
           // Clean up the process
           if (anvilProcess) {
             try {
-              anvilProcess.kill("SIGKILL");
+              if (isWindows) {
+                anvilProcess.kill();
+              } else {
+                anvilProcess.kill("SIGKILL");
+              }
             } catch (e) {
               console.error("Error killing failed process:", e);
             }
@@ -199,6 +299,7 @@ export async function startAnvil(command: string): Promise<void> {
       // Success detection
       anvilProcess.stdout.on("data", (data) => {
         const output = data.toString();
+        console.log("Anvil stdout:", output.trim());
 
         if (output.includes("Listening on")) {
           console.log("✅ Anvil started successfully!");
@@ -214,7 +315,10 @@ export async function startAnvil(command: string): Promise<void> {
         const errorOutput = data.toString();
         console.error("Anvil stderr:", errorOutput.trim());
 
-        if (errorOutput.includes("Address already in use")) {
+        if (
+          errorOutput.includes("Address already in use") ||
+          errorOutput.includes("bind: An attempt was made to access a socket")
+        ) {
           rejectOnce(
             new Error(
               `Port ${ANVIL_PORT} is still in use. Try again in a few seconds.`
@@ -278,6 +382,7 @@ export function stopAnvil(): Promise<void> {
 
     console.log("Stopping Anvil process...");
     let resolved = false;
+    const isWindows = os.platform() === "win32";
 
     const resolveOnce = () => {
       if (!resolved) {
@@ -299,7 +404,11 @@ export function stopAnvil(): Promise<void> {
       if (anvilProcess && !resolved) {
         console.log("Force killing Anvil...");
         try {
-          anvilProcess.kill("SIGKILL");
+          if (isWindows) {
+            anvilProcess.kill(); // Windows doesn't support signal parameter
+          } else {
+            anvilProcess.kill("SIGKILL");
+          }
         } catch (err) {
           console.error("Error force killing:", err);
         }
@@ -313,14 +422,18 @@ export function stopAnvil(): Promise<void> {
 
     // Try graceful shutdown
     try {
-      anvilProcess.kill("SIGTERM");
+      if (isWindows) {
+        anvilProcess.kill(); // Windows: just kill()
+      } else {
+        anvilProcess.kill("SIGTERM"); // Unix: SIGTERM first
+      }
     } catch (err) {
-      console.error("Error sending SIGTERM:", err);
+      console.error("Error sending termination signal:", err);
       try {
-        anvilProcess.kill("SIGKILL");
+        anvilProcess.kill(); // Fallback to basic kill
         setTimeout(resolveOnce, 1000);
       } catch (killErr) {
-        console.error("Error sending SIGKILL:", killErr);
+        console.error("Error sending kill signal:", killErr);
         resolveOnce();
       }
     }

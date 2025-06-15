@@ -1,3 +1,5 @@
+import { LiaCheckDoubleSolid } from "react-icons/lia";
+
 const Header = ({ showCheck }: { showCheck: boolean }) => {
   return (
     <div>
@@ -7,14 +9,13 @@ const Header = ({ showCheck }: { showCheck: boolean }) => {
         <h1>SlotMatrix</h1>
         {showCheck && (
           <div className="green-check">
-            <i
-              className="codicon codicon-check-all"
+            <LiaCheckDoubleSolid
               style={{
                 color: "white",
                 fontSize: "16px",
                 fontWeight: "bold",
               }}
-            ></i>
+            />
           </div>
         )}
       </div>

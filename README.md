@@ -15,19 +15,11 @@
 See Slot Matrix in action:
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=c3Jfdv1Szv0" target="_blank">
-    <img src="./assets/demo1.gif" alt="Slot Matrix Demo 1" />
+  <a href="https://www.youtube.com/watch?v=O_zq9p-o8wU" target="_blank">
+    <img src="./assets/demo.gif" alt="Slot Matrix Demo 1" />
   </a>
   <br/>
-  <strong><a href="https://www.youtube.com/watch?v=c3Jfdv1Szv0" target="_blank">▶ Watch Demo 1 on YouTube</a></strong>
-</p>
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=s29JBp9ZCjc" target="_blank">
-    <img src="./assets/demo2.gif" alt="Slot Matrix Demo 2" />
-  </a>
-  <br/>
-  <strong><a href="https://www.youtube.com/watch?v=s29JBp9ZCjc" target="_blank">▶ Watch Demo 2 on YouTube</a></strong>
+  <strong><a href="https://www.youtube.com/watch?v=O_zq9p-o8wU" target="_blank">▶ Watch Demo on YouTube</a></strong>
 </p>
 
 ## ✨ Key Features
@@ -58,6 +50,30 @@ foundryup
 ```
 
 > **Note for Windows Users**: Run the above commands using [Git Bash](https://gitforwindows.org/) or [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+## 🛠️ Extension Installation Guide
+
+Follow these steps to install the Slot Matrix extension in Visual Studio Code:
+
+1. **Install via Visual Studio Code Marketplace**:
+
+   - Open Visual Studio Code.
+   - Go to the Extensions view by clicking the Extensions icon in the Activity Bar on the side or pressing `Cmd+Shift+X` (or `Ctrl+Shift+X` on Windows).
+   - Search for **Slot Matrix** in the Extensions Marketplace.
+   - Click **Install** on the "Slot Matrix" extension by Anmol Dhiman.
+
+2. **Install via VSIX File** (Alternative):
+
+   - Download the `.vsix` file for Slot Matrix version 0.2.0 from the [GitHub Releases page](https://github.com/Anmol-Dhiman/SlotMatrix/releases) or another trusted source provided by the developer.
+   - In Visual Studio Code, open the Command Palette with `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows).
+   - Type and select **Extensions: Install from VSIX**.
+   - Browse to the downloaded `.vsix` file and select it to install.
+
+3. **Verify Installation**:
+   - After installation, open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`) and type `SlotMatrix`.
+   - Ensure commands like `SlotMatrix: Welcome` and `SlotMatrix: Start` appear in the list.
+
+> **Note**: If you encounter issues during installation, ensure Visual Studio Code is version 1.85.0 or higher and check the [Support & Contact](#support--contact) section for help.
 
 ## 🚀 Usage & Commands
 
