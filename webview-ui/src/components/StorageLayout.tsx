@@ -1,9 +1,17 @@
-import { hexToBytes, pad, toHex, keccak256 } from "viem";
+import {
+  hexToBytes,
+  pad,
+  toHex,
+  keccak256,
+  createPublicClient,
+  http,
+} from "viem";
 
 import { useEffect, useState } from "react";
 import JsonView from "@uiw/react-json-view";
 import { vscodeTheme } from "@uiw/react-json-view/vscode";
-import { provider } from "../App";
+import { anvil } from "viem/chains";
+import { LOCAL_HOST_LINK } from "../../utils/Constants";
 
 interface StorageLayoutInterface {
   storageLayout: {
@@ -33,6 +41,11 @@ function StorageLayout({
   contractAddress,
   refreshTick,
 }: StorageLayoutInterface) {
+  const provider = createPublicClient({
+    chain: anvil,
+    transport: http(LOCAL_HOST_LINK),
+  });
+
   const [nestedTree, setNestedTree] = useState<TreeNode[]>([]);
   useEffect(() => {
     (async () => {

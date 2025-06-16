@@ -1,3 +1,5 @@
+import { Hex } from "viem";
+
 //used while taking input from user
 export type Input = {
   name: string;
@@ -28,9 +30,9 @@ export type DeployedContract = {
   address: string;
   functions: FuncState[];
   abi: any;
-  balance: string;
   refreshTick: number;
   storageLayout: any;
+  balance: string;
 };
 
 export type LogData = {
@@ -83,4 +85,15 @@ export type StorageLayout = {
       value?: string; // optional, e.g. for mappings
     };
   };
+};
+
+export type ContractJsonData = {
+  abi: any;
+  bytecode: Hex;
+  storageLayout: StorageLayout;
+};
+
+export type ETHInputDataType = {
+  ethValue: number;
+  ethFormat: number;
 };

@@ -280,7 +280,7 @@ function getWelcomePageContent(
         <div>Start SlotMatrix dashboard</div>
       </div>
       <div class="command">
-        <div class="command-name">SlotMatrix : Save Contracts</div>
+        <div class="command-name">SlotMatrix : Save Contracts (Cmd/Ctrl + Shift + S)</div>
         <div>
           Run <span class="kbd">forge clean</span> and
           <span class="kbd">forge build --extra-output storageLayout</span> in

@@ -1,79 +1,87 @@
-import {
-  VscodeDivider,
-  VscodeScrollable,
-} from "@vscode-elements/react-elements";
+import { VscodeScrollable } from "@vscode-elements/react-elements";
+import { LogData, DeployedContract, WalletData } from "../../utils/Types";
 import Log from "./Log";
-import { LogData } from "../../utils/Types";
+import { AnvilKeys } from "../../utils/AnvilKeys";
 import { vscode } from "../App";
 import { MessageId } from "../../../src/MessageId";
+import { VscClearAll, VscCircleSlash } from "react-icons/vsc";
 
 type LogSectionProps = {
-  logData: LogData[];
-  resetLogs: () => void;
-  resetDeployedContract: () => void;
-  resetWallets: () => void;
+  logs: LogData[];
+  selectedNetwork: number;
+  setDeployedContract: React.Dispatch<React.SetStateAction<DeployedContract[]>>;
+  setLogData: React.Dispatch<React.SetStateAction<LogData[]>>;
+  setWallets: React.Dispatch<React.SetStateAction<WalletData[]>>;
+  setSelectedNetwork: React.Dispatch<React.SetStateAction<number>>;
 };
-
 const LogSection = ({
-  logData,
-  resetLogs,
-  resetDeployedContract,
-  resetWallets,
+  logs,
+  selectedNetwork,
+  setDeployedContract,
+  setLogData,
+  setWallets,
+  setSelectedNetwork,
 }: LogSectionProps) => {
   return (
-    <div
-      style={{
-        width: "75%",
-        borderLeft: "1px solid gray",
-        paddingLeft: "12px",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <div style={{ height: "100%" }}>
+      {/* log section header  */}
       <div
         style={{
           display: "flex",
           flexDirection: "row",
           justifyContent: "space-between",
-          marginBottom: "8px",
           alignItems: "center",
+          height: "5%",
+          borderBottom: "1px solid gray",
+          paddingBottom: "12px",
+          marginBottom: "12px",
         }}
       >
-        <div className="heading" style={{ marginBottom: "0px" }}>
+        <div
+          style={{
+            fontWeight: "bold",
+            fontSize: "14px",
+          }}
+        >
           Logs
         </div>
-
         <div style={{ display: "flex", flexDirection: "row" }}>
-          <div
+          <VscCircleSlash
             className="icon "
             onClick={() => {
-              resetLogs();
+              setLogData([]);
             }}
             style={{ cursor: "pointer", marginRight: "12px" }}
             title="Clear logs"
-          >
-            <i className="codicon codicon-circle-slash"></i>
-          </div>
-          <div
-            className="icon "
-            onClick={() => {
-              resetLogs();
-              resetDeployedContract();
-              resetWallets();
-              vscode.postMessage({
-                id: MessageId.restartAnvil,
-              });
-            }}
+          />
+
+          <VscClearAll
             style={{ cursor: "pointer" }}
             title="Reset all"
-          >
-            <i className="codicon codicon-clear-all"></i>
-          </div>
+            className="icon"
+            onClick={() => {
+              setLogData([]);
+              setDeployedContract([]);
+              setWallets(AnvilKeys);
+              setSelectedNetwork(0);
+              if (selectedNetwork === 0)
+                //otherwise network section useEffect already send the request to create new anvil terminal
+                vscode.postMessage({
+                  id: MessageId.restartAnvil,
+                  data: "anvil --port 9545 --hardfork prague",
+                });
+            }}
+          />
         </div>
       </div>
-      <VscodeDivider />
-      <VscodeScrollable style={{ height: "450px" }}>
-        <Log logData={logData} />
+
+      {/* logs  */}
+      <VscodeScrollable
+        style={{
+          height: "85%",
+        }}
+      >
+        <Log logData={logs} />
       </VscodeScrollable>
     </div>
   );

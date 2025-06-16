@@ -13,10 +13,18 @@ import { vscode } from "../src/App";
 export function consoleLog(message: string) {
   vscode.postMessage({
     id: MessageId.log,
-    data: message,
+    data: `from frontend : ${message}`,
   });
 }
 
+export const isValidUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === "http:" || urlObj.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 export function showError(message: string) {
   vscode.postMessage({
     id: MessageId.showMessage,
@@ -256,7 +264,6 @@ export function decodeCustomError(
     return undefined;
   }
 }
-
 
 export function buildDeploymentLog(
   isDeployedSuccess: boolean,

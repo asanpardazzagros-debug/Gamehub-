@@ -1,32 +1,31 @@
 import {
-  VscodeOption,
-  VscodeSingleSelect,
   VscodeTextfield,
+  VscodeSingleSelect,
+  VscodeOption,
 } from "@vscode-elements/react-elements";
+import { ETHInputDataType } from "../../utils/Types";
+import { ETH_FORMATS } from "../../utils/Constants";
 
-export const ETHFormat = ["wei", "gwei", "finney", "ether"];
 type ETHInputProps = {
-  ethValue: string;
-  updateETHValue: (value: string) => void;
-  updateETHFormat: (value: string) => void;
+  ethInputData: ETHInputDataType;
+  setData: (value: ETHInputDataType) => void;
 };
 
-const ETHInput = ({
-  ethValue,
-  updateETHFormat,
-  updateETHValue,
-}: ETHInputProps) => {
+const ETHInput = ({ ethInputData, setData }: ETHInputProps) => {
   return (
-    <div>
+    <div style={{ marginBottom: "12px" }}>
       <div className="heading">ETH Value</div>
       <VscodeTextfield
         type="number"
-        value={ethValue}
+        value={ethInputData.ethValue.toString()}
         min={0}
         placeholder="ETH Value"
         onChange={(event) => {
           const value = Number((event.target as HTMLInputElement).value);
-          updateETHValue(value.toString());
+          setData({
+            ethFormat: ethInputData.ethFormat,
+            ethValue: value,
+          });
         }}
         style={{ marginBottom: "12px", width: "100%" }}
       />
@@ -34,13 +33,16 @@ const ETHInput = ({
       <div>
         <VscodeSingleSelect
           onChange={(event) => {
-            updateETHFormat((event.target as HTMLInputElement).value);
+            setData({
+              ethFormat: parseInt((event.target as HTMLInputElement).value),
+              ethValue: ethInputData.ethValue,
+            });
           }}
-          style={{ marginBottom: "12px", width: "100%" }}
+          style={{ width: "100%" }}
         >
-          {ETHFormat.map((format, index) => {
+          {ETH_FORMATS.map((format, index) => {
             return (
-              <VscodeOption key={index} value={format}>
+              <VscodeOption key={index} value={index.toString()}>
                 {format.toLocaleUpperCase()}
               </VscodeOption>
             );
