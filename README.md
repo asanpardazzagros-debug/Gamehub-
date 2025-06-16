@@ -16,7 +16,7 @@ See Slot Matrix in action:
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=O_zq9p-o8wU" target="_blank">
-    <img src="./assets/demo.gif" alt="Slot Matrix Demo 1" />
+    <img src="https://raw.githubusercontent.com/Anmol-Dhiman/SlotMatrix/refs/heads/feat/cleaning/assets/demo.gif" alt="Slot Matrix Demo" />
   </a>
   <br/>
   <strong><a href="https://www.youtube.com/watch?v=O_zq9p-o8wU" target="_blank">▶ Watch Demo on YouTube</a></strong>
